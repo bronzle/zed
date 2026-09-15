@@ -278,6 +278,9 @@ pub fn deploy_context_menu(
                     "Show Outgoing Calls",
                     Box::new(zed_actions::ShowOutgoingCalls),
                 )
+                // TEMPORARY: remove before submitting - entry point for trying out the
+                // call hierarchy tree panel.
+                .action("Show Call Hierarchy Tree", Box::new(zed_actions::ShowTree))
                 .separator()
                 .action("Rename Symbol", Box::new(Rename))
                 .action("Format Buffer", Box::new(Format))

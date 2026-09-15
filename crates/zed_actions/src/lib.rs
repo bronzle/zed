@@ -820,7 +820,13 @@ actions!(
 );
 actions!(
     call_hierarchy,
-    [ShowIncomingCalls, ShowOutgoingCalls, ToggleDirection]
+    [
+        ShowIncomingCalls,
+        ShowOutgoingCalls,
+        ToggleDirection,
+        /// Shows the call hierarchy tree for the symbol under the cursor.
+        ShowTree
+    ]
 );
 
 pub mod debug_panel {

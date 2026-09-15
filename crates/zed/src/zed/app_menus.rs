@@ -258,6 +258,12 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 ),
                 MenuItem::action("Show Incoming Calls", call_hierarchy::ShowIncomingCalls),
                 MenuItem::action("Show Outgoing Calls", call_hierarchy::ShowOutgoingCalls),
+                // TEMPORARY: remove before submitting - entry point for trying out the
+                // call hierarchy tree panel without relying on its keybinding.
+                MenuItem::action(
+                    "Show Call Hierarchy Tree",
+                    call_hierarchy::call_hierarchy_panel::ShowTree,
+                ),
                 MenuItem::separator(),
                 MenuItem::action("Next Problem", editor::actions::GoToDiagnostic::default()),
                 MenuItem::action(

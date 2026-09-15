@@ -602,6 +602,7 @@
       "alt-cmd-f12": "editor::GoToTypeDefinitionSplit",
       "alt-shift-f12": "editor::FindAllReferences",
       "cmd-k cmd-h": "call_hierarchy::ShowIncomingCalls",
+      "cmd-k cmd-shift-h": "call_hierarchy::ShowTree",
       "cmd-|": "editor::MoveToEnclosingBracket",
       "ctrl-m": "editor::MoveToEnclosingBracket", // From Jetbrains
       "alt-cmd-[": "editor::Fold",
@@ -1258,6 +1259,14 @@
       "cmd-k cmd-h": "call_hierarchy::ToggleDirection",
       "cmd-k right": "menu::SelectChild",
       "cmd-k left": "menu::SelectParent",
+    },
+  },
+  {
+    "context": "CallHierarchyPanel",
+    "use_key_equivalents": true,
+    "bindings": {
+      "cmd-k cmd-shift-h": "call_hierarchy::ShowTree",
+      "cmd-k cmd-h": "call_hierarchy::ToggleDirection",
     },
   },
   {

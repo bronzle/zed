@@ -28,6 +28,10 @@ use util::{ResultExt, paths::PathExt};
 use workspace::{DismissDecision, ModalView, Workspace};
 pub use zed_actions::{ShowIncomingCalls, ShowOutgoingCalls, ToggleDirection};
 
+pub mod call_hierarchy_panel;
+
+pub use call_hierarchy_panel::CallHierarchyPanel;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum CallHierarchyMode {
     #[default]
@@ -36,7 +40,7 @@ pub enum CallHierarchyMode {
 }
 
 impl CallHierarchyMode {
-    fn opposite(self) -> Self {
+    pub fn opposite(self) -> Self {
         match self {
             CallHierarchyMode::Incoming => CallHierarchyMode::Outgoing,
             CallHierarchyMode::Outgoing => CallHierarchyMode::Incoming,
@@ -68,6 +72,8 @@ const BASE_MODAL_WIDTH: Rems = Rems(42.0);
 #[derive(Debug, Clone, Copy, PartialEq, settings::RegisterSetting)]
 pub struct CallHierarchySettings {
     pub modal_max_width: settings::ModalWidthContent,
+    pub dock: settings::DockSide,
+    pub auto_expand_limit: usize,
 }
 
 impl Settings for CallHierarchySettings {
@@ -75,8 +81,36 @@ impl Settings for CallHierarchySettings {
         let call_hierarchy = content.call_hierarchy.as_ref().unwrap();
         Self {
             modal_max_width: call_hierarchy.modal_max_width.unwrap(),
+            dock: call_hierarchy.dock.unwrap(),
+            auto_expand_limit: call_hierarchy.auto_expand_limit.unwrap(),
         }
     }
+}
+
+/// vtsls stamps `data` onto the items it returns from `prepareCallHierarchy`, omits it
+/// on the items nested inside call results, then dereferences `data.id` on whatever it
+/// is handed back - so following a call it just reported fails with "Cannot read
+/// properties of undefined (reading 'id')". Re-preparing at the item's own position
+/// yields an equivalent item the server will accept. Servers that put nothing in
+/// `data`, like rust-analyzer, keep the item they were given and make no extra request.
+async fn accepted_by_server(
+    item: &CallHierarchyItem,
+    project: &Entity<Project>,
+    cx: &mut AsyncWindowContext,
+) -> CallHierarchyItem {
+    if item.data.is_some() {
+        return item.clone();
+    }
+    let task = project.update(cx, |project, cx| {
+        project.prepare_call_hierarchy(&item.buffer, item.selection_range.start, cx)
+    });
+    let prepared = task.await.log_err().flatten().unwrap_or_default();
+    let resolved = prepared
+        .iter()
+        .find(|candidate| candidate.data.is_some() && candidate.name == item.name)
+        .or_else(|| prepared.iter().find(|candidate| candidate.data.is_some()))
+        .cloned();
+    resolved.unwrap_or_else(|| item.clone())
 }
 
 pub async fn fetch_calls(
@@ -85,6 +119,14 @@ pub async fn fetch_calls(
     mode: CallHierarchyMode,
     cx: &mut AsyncWindowContext,
 ) -> Vec<Call> {
+    // Keep the item's file open with the language servers for the duration. Buffer
+    // registration is refcounted against open editors, so a file opened only to hold a
+    // call site was never announced to the server - and tsserver answers nothing about
+    // files it has not been sent, including the `prepareCallHierarchy` below.
+    let _lsp_handle = project.update(cx, |project, cx| {
+        project.register_buffer_with_language_servers(&item.buffer, cx)
+    });
+    let item = &accepted_by_server(item, project, cx).await;
     let raw_calls = match mode {
         CallHierarchyMode::Incoming => {
             let task = project.update(cx, |project, cx| project.incoming_calls(item.clone(), cx));
@@ -862,6 +904,28 @@ fn toggle_call_hierarchy(
             CallHierarchyView::new(editor, project, workspace_weak, mode, window, cx)
         });
     });
+}
+
+/// Builds a [`Call`] for the symbol the hierarchy is rooted at, so the panel can
+/// render it as an ordinary row rather than a separate header.
+pub(crate) async fn root_call(
+    item: &CallHierarchyItem,
+    project: &Entity<Project>,
+    cx: &mut AsyncWindowContext,
+) -> Call {
+    let mut call = Call {
+        item: item.clone(),
+        target: item_location(item),
+        site_count: 1,
+        label: None,
+        display: CallDisplay::default(),
+    };
+    attach_labels(std::slice::from_mut(&mut call), project, cx).await;
+    cx.update(|_, cx| {
+        call.display = compute_call_display(&call, cx);
+    })
+    .ok();
+    call
 }
 
 fn item_location(item: &CallHierarchyItem) -> Location {

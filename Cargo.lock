@@ -2661,7 +2661,9 @@ dependencies = [
 name = "call_hierarchy"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "editor",
+ "fs",
  "futures 0.3.34",
  "fuzzy",
  "gpui",
@@ -2674,6 +2676,7 @@ dependencies = [
  "proto",
  "serde_json",
  "settings",
+ "smallvec",
  "theme",
  "theme_settings",
  "tree-sitter-rust",

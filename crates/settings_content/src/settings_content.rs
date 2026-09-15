@@ -1030,6 +1030,17 @@ pub struct CallHierarchySettingsContent {
     ///
     /// Default: medium
     pub modal_max_width: Option<ModalWidthContent>,
+    /// The position of the call hierarchy panel
+    ///
+    /// Default: right
+    pub dock: Option<DockSide>,
+    /// How many first-level calls the panel will expand automatically, so that empty
+    /// branches are visible without clicking each one. Expanding costs one language
+    /// server request per call, so levels wider than this are left collapsed. Set to
+    /// 0 to always expand manually.
+    ///
+    /// Default: 16
+    pub auto_expand_limit: Option<usize>,
 }
 
 #[with_fallible_options]
